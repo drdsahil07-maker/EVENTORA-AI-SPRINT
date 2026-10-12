@@ -639,7 +639,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     setTimeout(() => setSuccessNotice(null), 5000);
   };
 
-  const handleSendArtistRequest = (artist: TalentProfile | RecommendedArtist) => {
+  const handleSendArtistRequest = (artist: any) => {
     const targetEvent = events[0] || { name: 'Upcoming Production', date: 'Oct 15, 2026' };
     const newReq: OrganizerBookingRequest = {
       id: `req-${Date.now()}`,
@@ -850,7 +850,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-black text-slate-900">Rate: ₹{venue.indicativeRateINR.toLocaleString('en-IN')}</span>
+              <span className="text-xs font-black text-slate-900">Rate: ₹{venue.indicativeRateINR ? venue.indicativeRateINR.toLocaleString('en-IN') : '0'}</span>
               <Button
                 variant="primary"
                 size="sm"

@@ -25,7 +25,17 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<CurrentView>('landing');
+  const [currentView, setCurrentView] = useState<CurrentView>(() => {
+    return window.location.pathname === '/landing' ? 'landing' : 'organizer';
+  });
+
+  React.useEffect(() => {
+    const newPath = currentView === 'landing' ? '/landing' : '/';
+    if (window.location.pathname !== newPath) {
+      window.history.pushState({}, '', newPath);
+    }
+  }, [currentView]);
+
   const [organizerTab, setOrganizerTab] = useState<OrganizerTab>('overview');
   const [artistTab, setArtistTab] = useState<ArtistTab>('overview');
   const [venueTab, setVenueTab] = useState<VenueTab>('overview');
