@@ -1,0 +1,6 @@
+{
+  "name": "EVENTORA",
+  "description": "Connected platform for Event Organizers, Artists, and Venue Owners. Every Event. Every Talent. One Network.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
