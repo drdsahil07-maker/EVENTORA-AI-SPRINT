@@ -3,6 +3,7 @@ import React from 'react';
 export type StatusVariant =
   | 'Pending'
   | 'Accepted'
+  | 'Confirmed'
   | 'Rejected'
   | 'Cancelled'
   | 'secured'
@@ -31,6 +32,13 @@ const statusConfig: Record<
   },
   Accepted: {
     label: 'Accepted',
+    dot: 'bg-emerald-500',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    border: 'border-emerald-200',
+  },
+  Confirmed: {
+    label: 'Confirmed',
     dot: 'bg-emerald-500',
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',

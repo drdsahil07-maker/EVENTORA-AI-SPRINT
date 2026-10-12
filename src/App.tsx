@@ -15,6 +15,7 @@ import { LandingView } from './components/landing/LandingView';
 import { OrganizerDashboard } from './components/dashboard/OrganizerDashboard';
 import { ArtistDashboard } from './components/dashboard/ArtistDashboard';
 import { VenueDashboard } from './components/dashboard/VenueDashboard';
+import { PricingPage } from './components/pricing/PricingPage';
 import {
   ArrowLeft,
   Radio,
@@ -103,18 +104,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-[#CCFBF1] selection:text-[#0F766E]">
-      {/* Top Application Header */}
-      <Header
-        currentView={currentView}
-        onNavigate={(view) => setCurrentView(view)}
-        unreadCount={unreadCount}
-        onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
-        mobileMenuOpen={mobileMenuOpen}
-        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
-        onOpenQuickAction={() => setBackupModalOpen(true)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      {/* Top Application Header (Hidden on desktop in Organizer view to match reference image layout) */}
+      <div className={currentView === 'organizer' ? 'lg:hidden' : ''}>
+        <Header
+          currentView={currentView}
+          onNavigate={(view) => setCurrentView(view)}
+          unreadCount={unreadCount}
+          onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
+          mobileMenuOpen={mobileMenuOpen}
+          onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onOpenQuickAction={() => setBackupModalOpen(true)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+      </div>
 
       {/* Main View Area */}
       {currentView === 'landing' ? (
@@ -122,10 +125,21 @@ export default function App() {
           <LandingView
             onSelectRole={handleSelectRole}
             onOpenQuickAction={() => setBackupModalOpen(true)}
+            onNavigateToPricing={() => setCurrentView('pricing')}
           />
         </main>
+      ) : currentView === 'pricing' ? (
+        <main className="flex-1">
+          <PricingPage onNavigateToConsole={(view) => setCurrentView(view)} />
+        </main>
       ) : (
-        <div className="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+        <div
+          className={`flex-1 flex w-full ${
+            currentView === 'organizer'
+              ? 'max-w-none px-0 py-0 gap-0'
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6'
+          }`}
+        >
           {/* Desktop Role Sidebar */}
           <div className="hidden lg:block shrink-0">
             <Sidebar
@@ -138,71 +152,78 @@ export default function App() {
                   : venueTab
               }
               onTabChange={(tabId) => {
-                if (currentView === 'organizer') setOrganizerTab(tabId as OrganizerTab);
+                if (currentView === 'organizer') {
+                  if (tabId === 'pricing') {
+                    setCurrentView('pricing');
+                  } else {
+                    setOrganizerTab(tabId as OrganizerTab);
+                  }
+                }
                 if (currentView === 'artist') setArtistTab(tabId as ArtistTab);
                 if (currentView === 'venue') setVenueTab(tabId as VenueTab);
               }}
               onSwitchRole={(newRole) => setCurrentView(newRole)}
+              onNavigateToPricing={() => setCurrentView('pricing')}
             />
           </div>
 
           {/* Main Dashboard Workspace Content */}
-          <main className="flex-1 min-w-0">
-            {/* Breadcrumb / Context Bar */}
-            <div className="mb-4 flex items-center justify-between text-xs text-[#64748B]">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentView('landing')}
-                  className="hover:text-[#0D9488] flex items-center gap-1 cursor-pointer font-medium"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Overview
-                </button>
-                <span>/</span>
-                <span className="font-semibold text-[#0F172A] capitalize">
-                  {currentView === 'organizer'
-                    ? 'Event Organizer'
-                    : currentView === 'artist'
-                    ? 'Artist & Performer'
-                    : 'Venue Owner'}{' '}
-                  Console
-                </span>
-              </div>
+          <main
+            className={`flex-1 min-w-0 ${
+              currentView === 'organizer' ? 'p-4 sm:p-6 lg:p-8 aurora-bg' : ''
+            }`}
+          >
+            {/* Breadcrumb / Context Bar (Hidden in Organizer view which has its own top bar) */}
+            {currentView !== 'organizer' && (
+              <div className="mb-4 flex items-center justify-between text-xs text-[#64748B]">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentView('landing')}
+                    className="hover:text-[#0D9488] flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Overview
+                  </button>
+                  <span>/</span>
+                  <span className="font-semibold text-[#0F172A] capitalize">
+                    {currentView === 'artist'
+                      ? 'Artist & Performer'
+                      : 'Venue Owner'}{' '}
+                    Console
+                  </span>
+                </div>
 
-              {/* Mobile Role Switcher for small screens where sidebar is hidden */}
-              <div className="lg:hidden flex items-center gap-1 bg-white p-1 rounded-lg border border-[#E2E8F0]">
-                <button
-                  onClick={() => setCurrentView('organizer')}
-                  className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                    currentView === 'organizer'
-                      ? 'bg-[#0D9488] text-white'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  Org
-                </button>
-                <button
-                  onClick={() => setCurrentView('artist')}
-                  className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                    currentView === 'artist'
-                      ? 'bg-[#0D9488] text-white'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  Artist
-                </button>
-                <button
-                  onClick={() => setCurrentView('venue')}
-                  className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                    currentView === 'venue'
-                      ? 'bg-[#0D9488] text-white'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  Venue
-                </button>
+                {/* Mobile Role Switcher for small screens where sidebar is hidden */}
+                <div className="lg:hidden flex items-center gap-1 bg-white p-1 rounded-lg border border-[#E2E8F0]">
+                  <button
+                    onClick={() => setCurrentView('organizer')}
+                    className="px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer text-[#64748B] hover:text-slate-900"
+                  >
+                    Org
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('artist')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      currentView === 'artist'
+                        ? 'bg-[#0D9488] text-white'
+                        : 'text-[#64748B]'
+                    }`}
+                  >
+                    Artist
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('venue')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      currentView === 'venue'
+                        ? 'bg-[#0D9488] text-white'
+                        : 'text-[#64748B]'
+                    }`}
+                  >
+                    Venue
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Render Selected Role Workspace */}
             {currentView === 'organizer' && (
@@ -211,22 +232,32 @@ export default function App() {
                 onTabChange={(tab) => {
                   if (tab === 'date-rescue') {
                     setBackupModalOpen(true);
+                  } else if (tab === 'pricing') {
+                    setCurrentView('pricing');
                   } else {
                     setOrganizerTab(tab);
                   }
                 }}
                 onOpenBackupModal={() => setBackupModalOpen(true)}
+                onNavigateToPricing={() => setCurrentView('pricing')}
+                onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
               />
             )}
 
             {currentView === 'artist' && (
               <ArtistDashboard
+                activeTab={artistTab}
+                onTabChange={(tab) => setArtistTab(tab)}
                 onOpenDateRescue={() => setBackupModalOpen(true)}
               />
             )}
 
             {currentView === 'venue' && (
               <VenueDashboard
+                activeTab={venueTab}
+                onTabChange={(tab) => setVenueTab(tab)}
                 onOpenDateRescue={() => setBackupModalOpen(true)}
               />
             )}
@@ -274,6 +305,12 @@ export default function App() {
             >
               Venue Console
             </button>
+            <button
+              onClick={() => setCurrentView('pricing')}
+              className="text-[#0D9488] hover:text-[#0F766E] font-medium cursor-pointer"
+            >
+              Proposed Pricing
+            </button>
           </div>
         </div>
       </footer>
@@ -291,11 +328,15 @@ export default function App() {
         }}
       />
 
-      {/* Emergency Backup Radar Modal */}
+      {/* Emergency Backup Radar / Date Rescue Modal */}
       <BackupRequestModal
         isOpen={backupModalOpen}
         onClose={() => setBackupModalOpen(false)}
         onSubmit={handleBackupRequestSubmit}
+        onViewMyBookings={() => {
+          setCurrentView('organizer');
+          setOrganizerTab('my-bookings');
+        }}
       />
     </div>
   );

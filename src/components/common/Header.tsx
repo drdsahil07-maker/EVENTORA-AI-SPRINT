@@ -14,6 +14,7 @@ import {
   CalendarDays,
   User,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { CurrentView, UserRole } from '../../types';
 import { Button } from './Button';
@@ -116,6 +117,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Building2 className="w-3.5 h-3.5" />
               Venue Owner
+            </button>
+            <button
+              onClick={() => onNavigate('pricing')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                currentView === 'pricing'
+                  ? 'bg-[#0D9488] text-white shadow-xs'
+                  : 'text-[#64748B] hover:text-[#0F172A]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Pricing
             </button>
           </nav>
 
@@ -283,6 +295,20 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Building2 className="w-4 h-4 text-[#0D9488]" />
               Venue Owner Workspace
+            </button>
+            <button
+              onClick={() => {
+                onNavigate('pricing');
+                onToggleMobileMenu();
+              }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
+                currentView === 'pricing'
+                  ? 'bg-[#CCFBF1] text-[#0F766E] font-semibold'
+                  : 'text-[#64748B] hover:bg-slate-50'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Proposed Pricing & Plans
             </button>
           </div>
 

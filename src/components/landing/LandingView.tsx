@@ -16,11 +16,13 @@ import { Button } from '../common/Button';
 interface LandingViewProps {
   onSelectRole: (role: UserRole) => void;
   onOpenQuickAction: () => void;
+  onNavigateToPricing?: () => void;
 }
 
 export const LandingView: React.FC<LandingViewProps> = ({
   onSelectRole,
   onOpenQuickAction,
+  onNavigateToPricing,
 }) => {
   return (
     <div className="min-h-screen pb-16 bg-[#F8FAFC]">
@@ -60,6 +62,17 @@ export const LandingView: React.FC<LandingViewProps> = ({
           >
             Try Date Rescue
           </Button>
+
+          {onNavigateToPricing && (
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={onNavigateToPricing}
+              icon={<Sparkles className="w-4 h-4 text-amber-500" />}
+            >
+              View Proposed Pricing
+            </Button>
+          )}
         </div>
 
         <div className="pt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-[#64748B]">
