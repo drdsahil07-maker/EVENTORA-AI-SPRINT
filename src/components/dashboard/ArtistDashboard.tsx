@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { StatusBadge } from '../common/Badge';
+import { ProfilePhotoUploader } from '../common/ProfilePhotoUploader';
+import { ArtistProfileEditModal } from './ArtistProfileEditModal';
+import { getProfilePhoto } from '../../utils/imageStorage';
 import {
   ArtistTab,
   SharedBookingRequest,
@@ -70,7 +73,7 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
     } catch {
       // ignore
     }
-    return SEEDED_RESCUE_ARTISTS[1]; // Aanya Sen (Singer)
+    return SEEDED_RESCUE_ARTISTS[0]; // Sahil Verma (Artist)
   });
 
   // Artist Availability Calendar state
@@ -91,9 +94,24 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
 
   // Editing profile fields
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileCity, setProfileCity] = useState(activeArtist.city);
   const [profilePrice, setProfilePrice] = useState(activeArtist.indicativePriceINR);
   const [profileServiceArea, setProfileServiceArea] = useState(activeArtist.serviceArea.join(', '));
+  const [profileBio, setProfileBio] = useState(activeArtist.bio || activeArtist.shortDescription);
+
+  // Load custom photo if saved in indexedDB/localStorage
+  useEffect(() => {
+    let isMounted = true;
+    getProfilePhoto(`artist:${activeArtist.id}`).then((photo) => {
+      if (isMounted && photo) {
+        setActiveArtist((prev) => ({ ...prev, avatarUrl: photo }));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [activeArtist.id]);
 
   // Modals & Feedback
   const [rejectConfirmBooking, setRejectConfirmBooking] = useState<SharedBookingRequest | null>(null);
@@ -160,6 +178,7 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
       setProfileCity(found.city);
       setProfilePrice(found.indicativePriceINR);
       setProfileServiceArea(found.serviceArea.join(', '));
+      setProfileBio(found.bio || found.shortDescription);
       showToast(`Switched active demo profile to ${found.name}.`);
     }
   };
@@ -267,6 +286,8 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
       city: profileCity,
       indicativePriceINR: Number(profilePrice) || prev.indicativePriceINR,
       serviceArea: profileServiceArea.split(',').map((s) => s.trim()).filter(Boolean),
+      bio: profileBio,
+      shortDescription: profileBio,
     }));
     setIsEditingProfile(false);
     showToast('Artist profile details updated successfully.');
@@ -391,8 +412,16 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
       <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#CCFBF1] text-[#0F766E] font-bold text-lg flex items-center justify-center shrink-0">
-              {activeArtist.name.slice(0, 2).toUpperCase()}
+            <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-slate-200 shrink-0 bg-[#CCFBF1] text-[#0F766E] font-bold text-lg flex items-center justify-center">
+              {activeArtist.avatarUrl ? (
+                <img
+                  src={activeArtist.avatarUrl}
+                  alt={activeArtist.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{activeArtist.name.slice(0, 2).toUpperCase()}</span>
+              )}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -403,6 +432,11 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#CCFBF1] text-[#0F766E]">
                   Demo Profile
                 </span>
+                {activeArtist.subscriptionTier === 'premium-artist' && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                    ★ Premium Tier
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-3 text-xs text-[#64748B]">
@@ -415,6 +449,12 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
                   Indicative Fee: ₹{activeArtist.indicativePriceINR.toLocaleString('en-IN')}
                 </span>
               </div>
+
+              {(activeArtist.bio || activeArtist.shortDescription) && (
+                <p className="text-xs text-slate-600 line-clamp-2 max-w-2xl pt-0.5">
+                  {activeArtist.bio || activeArtist.shortDescription}
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {activeArtist.skills.map((s) => (
@@ -430,10 +470,10 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onTabChange('profile')}
+              onClick={() => setIsProfileModalOpen(true)}
               icon={<Edit2 className="w-3.5 h-3.5" />}
             >
-              Manage Profile
+              Manage Profile & Photo
             </Button>
           </div>
         </div>
@@ -716,21 +756,30 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
 
       {/* TAB VIEW: MY PROFILE */}
       {activeTab === 'profile' && (
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs p-6 space-y-4">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
             <div>
               <h3 className="font-bold text-base text-[#0F172A]">My Profile & Pricing</h3>
-              <p className="text-xs text-[#64748B]">Update your location, service area, and indicative rates</p>
+              <p className="text-xs text-[#64748B]">Update your profile photo, biography, location, and indicative fees</p>
             </div>
-            {!isEditingProfile ? (
-              <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)} icon={<Edit2 className="w-3.5 h-3.5" />}>
-                Edit Details
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm" onClick={handleSaveProfile} icon={<Save className="w-3.5 h-3.5" />}>
-                Save Profile
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setIsProfileModalOpen(true)} icon={<Edit2 className="w-3.5 h-3.5" />}>
+              Edit Profile & Photo
+            </Button>
+          </div>
+
+          {/* Profile Photo Upload Section */}
+          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
+            <h4 className="text-xs font-bold text-[#0F172A]">Profile Photo</h4>
+            <ProfilePhotoUploader
+              profileKey={`artist:${activeArtist.id}`}
+              currentPhotoUrl={activeArtist.avatarUrl}
+              fallbackInitials={activeArtist.name.slice(0, 2).toUpperCase()}
+              userName={activeArtist.name}
+              onPhotoUpdated={(newUrl) => {
+                setActiveArtist((prev) => ({ ...prev, avatarUrl: newUrl }));
+                showToast(newUrl ? 'Profile photo saved successfully!' : 'Profile photo removed.');
+              }}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -788,6 +837,20 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
                 value={profileServiceArea}
                 onChange={(e) => setProfileServiceArea(e.target.value)}
                 className={`w-full p-2.5 border rounded-xl ${
+                  isEditingProfile ? 'border-[#0D9488] bg-white' : 'border-[#E2E8F0] bg-slate-50 text-slate-700'
+                }`}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-semibold text-[#0F172A] mb-1">Artist Biography / Experience</label>
+              <textarea
+                rows={3}
+                disabled={!isEditingProfile}
+                value={profileBio}
+                onChange={(e) => setProfileBio(e.target.value)}
+                placeholder="Share your live performance background, genres, instruments, or tech rider highlights..."
+                className={`w-full p-2.5 border rounded-xl resize-none ${
                   isEditingProfile ? 'border-[#0D9488] bg-white' : 'border-[#E2E8F0] bg-slate-50 text-slate-700'
                 }`}
               />
@@ -1026,6 +1089,18 @@ export const ArtistDashboard: React.FC<ArtistDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Edit Artist Profile & Photo Modal */}
+      <ArtistProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        artist={activeArtist}
+        onSave={(updated) => {
+          setActiveArtist(updated);
+          showToast('Artist profile details and photo saved successfully.');
+        }}
+        showToast={showToast}
+      />
     </div>
   );
 };

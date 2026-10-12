@@ -54,14 +54,24 @@ export function matchRescueArtists(
     }
 
     // 3. Location / Service Area Match
-    const artistCity = artist.city.toLowerCase();
-    const servesCity = artist.serviceArea.some((area) =>
-      area.toLowerCase().includes(reqCity) || reqCity.includes(area.toLowerCase())
-    );
+    const cleanReqCity = reqCity.replace(/[^a-z0-9]/g, '');
+    const cleanArtistCity = artist.city.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isDirectCityMatch = cleanArtistCity === cleanReqCity;
+    const servesCity = artist.serviceArea.some((area) => {
+      const cleanArea = area.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return (
+        cleanArea === cleanReqCity ||
+        cleanArea.includes(cleanReqCity) ||
+        cleanReqCity.includes(cleanArea)
+      );
+    });
 
-    if (artistCity === reqCity || servesCity) {
-      score += 40;
-      reasons.push('City Match');
+    if (isDirectCityMatch) {
+      score += 45;
+      reasons.push(`Base City Match (${artist.city})`);
+    } else if (servesCity) {
+      score += 35;
+      reasons.push(`Serves Area (${request.city})`);
     }
 
     // 4. Budget Compatibility

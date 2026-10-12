@@ -667,51 +667,65 @@ export const DateRescueModal: React.FC<DateRescueModalProps> = ({
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-[#0F172A]">
-                                {candidate.artist.name}
-                              </h4>
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                                {candidate.artist.category}
-                              </span>
-                              {candidate.artist.availabilityStatus === 'Available (Demo)' ? (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#CCFBF1] text-[#0F766E] border border-[#99F6E4]">
-                                  Available (Demo)
-                                </span>
+                          <div className="flex items-start gap-3">
+                            <div className="w-12 h-12 rounded-xl overflow-hidden ring-1 ring-slate-200 shrink-0 bg-slate-100 flex items-center justify-center font-bold text-slate-700">
+                              {candidate.artist.avatarUrl ? (
+                                <img
+                                  src={candidate.artist.avatarUrl}
+                                  alt={candidate.artist.name}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                                  Availability Unconfirmed
-                                </span>
+                                <span>{candidate.artist.name.slice(0, 2).toUpperCase()}</span>
                               )}
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-[#64748B]">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3 text-[#0D9488]" />
-                                {candidate.artist.city} (Serves: {candidate.artist.serviceArea.join(', ')})
-                              </span>
-                              <span>·</span>
-                              <span className="font-bold text-[#0D9488]">
-                                Indicative Fee: ₹{candidate.artist.indicativePriceINR.toLocaleString('en-IN')}
-                              </span>
-                              {candidate.isOverBudget && (
-                                <span className="text-rose-600 font-semibold text-[10px]">
-                                  (Over Budget)
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-sm text-[#0F172A]">
+                                  {candidate.artist.name}
+                                </h4>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                                  {candidate.artist.category}
                                 </span>
-                              )}
-                            </div>
+                                {candidate.artist.availabilityStatus === 'Available (Demo)' ? (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#CCFBF1] text-[#0F766E] border border-[#99F6E4]">
+                                    Available (Demo)
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                    Availability Unconfirmed
+                                  </span>
+                                )}
+                              </div>
 
-                            {/* Match Reasons Tags */}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
-                              {candidate.matchReasons.map((reason) => (
-                                <span
-                                  key={reason}
-                                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                >
-                                  ✓ {reason}
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-[#64748B]">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-[#0D9488]" />
+                                  {candidate.artist.city} (Serves: {candidate.artist.serviceArea.join(', ')})
                                 </span>
-                              ))}
+                                <span>·</span>
+                                <span className="font-bold text-[#0D9488]">
+                                  Indicative Fee: ₹{candidate.artist.indicativePriceINR.toLocaleString('en-IN')}
+                                </span>
+                                {candidate.isOverBudget && (
+                                  <span className="text-rose-600 font-semibold text-[10px]">
+                                    (Over Budget)
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Match Reasons Tags */}
+                              <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                                {candidate.matchReasons.map((reason) => (
+                                  <span
+                                    key={reason}
+                                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                  >
+                                    ✓ {reason}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
 

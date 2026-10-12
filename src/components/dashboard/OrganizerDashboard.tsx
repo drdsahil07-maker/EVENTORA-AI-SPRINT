@@ -48,6 +48,10 @@ import {
 } from '../../types';
 import { CreateEventForm } from '../organizer/CreateEventForm';
 import { DateRescueModal } from '../rescue/DateRescueModal';
+import { ProfilePhotoUploader } from '../common/ProfilePhotoUploader';
+import { OrganizerProfileEditModal, OrganizerProfileData } from './OrganizerProfileEditModal';
+import { getProfilePhoto } from '../../utils/imageStorage';
+import { SEEDED_RESCUE_ARTISTS } from '../../data/mockArtists';
 import {
   getSharedBookings,
   saveSharedBooking,
@@ -399,6 +403,65 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   // Profile menu in top navigation
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfileData>(() => {
+    try {
+      const stored = localStorage.getItem('eventora_organizer_profile_rahul_raj_v1');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {
+      id: 'org-rahul-raj',
+      fullName: 'Rahul Raj',
+      email: 'rahul.raj@eventora.demo',
+      phone: '+91 98765 12345',
+      organizationName: 'Rahul Raj Productions',
+      city: 'Indore',
+      bio: 'Leading event organizer and production head specializing in college fests, live concerts, and corporate galas.',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      isPublicContact: true,
+    };
+  });
+  const [isOrganizerProfileModalOpen, setIsOrganizerProfileModalOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    getProfilePhoto(`organizer:${organizerProfile.id}`).then((photo) => {
+      if (isMounted && photo) {
+        setOrganizerProfile((prev) => ({ ...prev, avatarUrl: photo }));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [organizerProfile.id]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eventora_organizer_profile_rahul_raj_v1', JSON.stringify(organizerProfile));
+    } catch {}
+  }, [organizerProfile]);
+
+  // Close dropdowns on outside click or Escape
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.profile-menu-container') && !target.closest('.city-menu-container')) {
+        setProfileMenuOpen(false);
+        setCityDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileMenuOpen(false);
+        setCityDropdownOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Active calendar date selection
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<number>(15);
@@ -628,7 +691,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         {/* Right Nav Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* City Selector Pill */}
-          <div className="relative">
+          <div className="relative city-menu-container">
             <button
               onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/60 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
@@ -639,7 +702,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </button>
 
             {cityDropdownOpen && (
-              <div className="absolute right-0 mt-1.5 w-36 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs font-semibold animate-in fade-in">
+              <div className="absolute right-0 mt-1.5 w-36 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-[100] text-xs font-semibold animate-in fade-in">
                 {['Indore', 'Mumbai', 'Delhi', 'Bengaluru', 'Pune'].map((cityName) => (
                   <button
                     key={cityName}
@@ -674,58 +737,76 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </span>
           </button>
 
-          {/* User Profile Pill */}
-          <div className="relative">
+           {/* User Profile Pill */}
+           <div className="relative profile-menu-container">
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-xl bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/60 transition-colors cursor-pointer"
             >
               <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80"
-                alt="Sahil Verma"
+                src={organizerProfile.avatarUrl}
+                alt={organizerProfile.fullName}
                 className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200"
               />
               <div className="text-left hidden sm:block">
-                <div className="text-xs font-extrabold text-slate-900 leading-none">Sahil Verma</div>
+                <div className="text-xs font-extrabold text-slate-900 leading-none">{organizerProfile.fullName}</div>
                 <div className="text-[10px] font-medium text-slate-500 mt-0.5">Event Organizer</div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
             </button>
 
             {profileMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 text-xs font-semibold animate-in fade-in space-y-1">
-                <div className="px-2 py-1 text-[11px] text-slate-400 uppercase tracking-wider font-bold">
-                  Organizer Profile
+              <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/90 p-3 z-[100] text-xs font-semibold animate-in fade-in space-y-2">
+                <div className="flex items-center gap-3 px-2 py-2 border-b border-slate-100">
+                  <img
+                    src={organizerProfile.avatarUrl}
+                    alt={organizerProfile.fullName}
+                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-200 shrink-0"
+                  />
+                  <div className="overflow-hidden">
+                    <div className="font-extrabold text-slate-900 text-sm truncate">{organizerProfile.fullName}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{organizerProfile.email}</div>
+                    <div className="text-[10px] font-bold text-[#0D9488] mt-0.5">Event Organizer</div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    onTabChange('my-events');
-                    setProfileMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 cursor-pointer"
-                >
-                  My Productions
-                </button>
-                <button
-                  onClick={() => {
-                    onTabChange('pricing');
-                    setProfileMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 cursor-pointer flex items-center justify-between"
-                >
-                  <span>Pro Membership</span>
-                  <Crown className="w-3.5 h-3.5 text-amber-500" />
-                </button>
-                <div className="pt-1 border-t border-slate-100">
+
+                <div className="space-y-1">
                   <button
                     onClick={() => {
+                      setIsOrganizerProfileModalOpen(true);
                       setProfileMenuOpen(false);
-                      setSuccessNotice('Signed in as Sahil Verma (Demo Session).');
                     }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                    className="w-full text-left px-3 py-2 rounded-xl text-teal-700 bg-teal-50/80 hover:bg-teal-100/80 font-bold cursor-pointer flex items-center justify-between transition-colors"
                   >
-                    Demo Session Active
+                    <span>Edit Organizer Profile</span>
+                    <Sparkles className="w-3.5 h-3.5 text-[#0D9488]" />
                   </button>
+                  <button
+                    onClick={() => {
+                      onTabChange('my-events');
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100/80 transition-colors cursor-pointer"
+                  >
+                    My Productions
+                  </button>
+                  <button
+                    onClick={() => {
+                      onTabChange('pricing');
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100/80 transition-colors cursor-pointer flex items-center justify-between"
+                  >
+                    <span>Pro Membership</span>
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  </button>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="px-2 py-1 text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                    <span>Active Session</span>
+                    <span className="text-slate-700 font-bold">Rahul Raj</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1828,6 +1909,22 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Edit Organizer Profile Modal */}
+      <OrganizerProfileEditModal
+        isOpen={isOrganizerProfileModalOpen}
+        onClose={() => setIsOrganizerProfileModalOpen(false)}
+        profile={organizerProfile}
+        onSave={(updated) => {
+          setOrganizerProfile(updated);
+          setSuccessNotice(`Organizer profile for ${updated.fullName} saved successfully.`);
+          setTimeout(() => setSuccessNotice(null), 3500);
+        }}
+        showToast={(msg, type) => {
+          setSuccessNotice(msg);
+          setTimeout(() => setSuccessNotice(null), 3500);
+        }}
+      />
     </div>
   );
 };

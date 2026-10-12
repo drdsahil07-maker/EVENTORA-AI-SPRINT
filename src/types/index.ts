@@ -71,6 +71,7 @@ export interface OrganizerEvent {
 export type RescueArtistCategory =
   | 'DJ'
   | 'Singer'
+  | 'Musician'
   | 'Photographer'
   | 'Anchor'
   | 'Dancer'
@@ -96,6 +97,12 @@ export interface RescueArtistProfile {
   availabilityStatus: 'Available (Demo)' | 'Availability Unconfirmed' | 'Booked (Demo)';
   shortDescription: string;
   bookedDates?: string[];
+  avatarUrl?: string;
+  bio?: string;
+  subscriptionTier?: 'free' | 'seasonal-pass' | 'premium-artist';
+  contactPhone?: string;
+  contactEmail?: string;
+  isPublicContact?: boolean;
 }
 
 export interface RescueRequestData {
