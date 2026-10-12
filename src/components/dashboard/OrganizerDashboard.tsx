@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Calendar,
   Plus,
@@ -440,11 +441,48 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     } catch {}
   }, [organizerProfile]);
 
+  // Profile button ref and coordinates for portal dropdown
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (profileMenuOpen && profileButtonRef.current) {
+      const rect = profileButtonRef.current.getBoundingClientRect();
+      setDropdownCoords({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [profileMenuOpen]);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const handleUpdate = () => {
+      if (profileButtonRef.current) {
+        const rect = profileButtonRef.current.getBoundingClientRect();
+        setDropdownCoords({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    };
+    window.addEventListener('scroll', handleUpdate, true);
+    window.addEventListener('resize', handleUpdate);
+    return () => {
+      window.removeEventListener('scroll', handleUpdate, true);
+      window.removeEventListener('resize', handleUpdate);
+    };
+  }, [profileMenuOpen]);
+
   // Close dropdowns on outside click or Escape
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.profile-menu-container') && !target.closest('.city-menu-container')) {
+      if (
+        !target.closest('.profile-menu-container') &&
+        !target.closest('.profile-menu-portal') &&
+        !target.closest('.city-menu-container')
+      ) {
         setProfileMenuOpen(false);
         setCityDropdownOpen(false);
       }
@@ -649,13 +687,323 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     );
   };
 
+  const renderMyEventsView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">My Productions & Events</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Manage all your planned events, schedules, and budgets</p>
+        </div>
+        <Button variant="primary" size="sm" onClick={() => setCreateModalOpen(true)} icon={<Plus className="w-4 h-4" />}>
+          Create New Event
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {events.length === 0 ? (
+          <div className="col-span-full py-12 text-center bg-white/60 rounded-2xl border border-slate-200">
+            <p className="text-sm font-bold text-slate-600">No events found.</p>
+            <p className="text-xs text-slate-400 mt-1">Click "Create New Event" to get started.</p>
+          </div>
+        ) : (
+          events.map((ev) => (
+            <div key={ev.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3 hover:shadow-md transition-all">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                    {ev.eventType}
+                  </span>
+                  <h3 className="font-extrabold text-base text-slate-900 mt-1.5">{ev.name}</h3>
+                </div>
+                <StatusBadge status={ev.status === 'Confirmed' ? 'Confirmed' : 'Accepted'} label={ev.status} size="sm" />
+              </div>
+
+              <div className="text-xs text-slate-600 space-y-1">
+                <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-slate-400" /><span>{ev.date} at {ev.startTime}</span></div>
+                <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-400" /><span>{ev.city}</span></div>
+                <div className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-slate-400" /><span>{ev.expectedGuests} Expected Guests</span></div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-black text-slate-900">Budget: ₹{ev.totalBudgetINR.toLocaleString('en-IN')}</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRescuePrefill({
+                        eventId: ev.id,
+                        eventName: ev.name,
+                        eventDate: ev.date,
+                        city: ev.city,
+                        category: (ev.requiredServices[0] as any) || 'Singer',
+                        budgetINR: Math.round(ev.totalBudgetINR * 0.35),
+                        reason: 'Artist Cancelled',
+                      });
+                      setRescueModalOpen(true);
+                    }}
+                  >
+                    Date Rescue
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      setEvents((prev) => prev.filter((item) => item.id !== ev.id));
+                      setSuccessNotice(`Event "${ev.name}" cancelled & removed.`);
+                      setTimeout(() => setSuccessNotice(null), 3000);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDiscoverArtistsView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Discover Artists & Performers</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Explore verified live acts, DJs, singers, and stage performers</p>
+        </div>
+        <span className="text-xs font-bold bg-[#CCFBF1] text-[#0F766E] px-3 py-1.5 rounded-xl">
+          {SEEDED_RESCUE_ARTISTS.length} Verified Acts Available
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {SEEDED_RESCUE_ARTISTS.map((artist) => (
+          <div key={artist.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+            <div className="flex items-start gap-3.5">
+              <img
+                src={artist.avatarUrl || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'}
+                alt={artist.name}
+                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-slate-200 shrink-0"
+              />
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-extrabold text-sm text-slate-900">{artist.name}</h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">{artist.category}</span>
+                </div>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-[#0D9488]" /> {artist.city} · Serves {artist.serviceArea.slice(0, 2).join(', ')}
+                </p>
+                <p className="text-xs font-black text-[#0D9488]">Indicative Fee: ₹{artist.indicativePriceINR.toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+
+            {artist.bio && <p className="text-xs text-slate-600 line-clamp-2">{artist.bio}</p>}
+
+            <div className="flex flex-wrap gap-1">
+              {artist.skills.map((s) => (
+                <span key={s} className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">{s}</span>
+              ))}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-600">● {artist.availabilityStatus}</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleSendArtistRequest(artist)}
+              >
+                Send Booking Request
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderDiscoverVenuesView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Discover Venues & Spaces</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Explore open-air grounds, ballrooms, and auditoriums with acoustic telemetry</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {discoverableVenues.map((venue) => (
+          <div key={venue.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4 hover:shadow-md transition-all flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700">{venue.type}</span>
+                <span className="text-xs font-bold text-emerald-600">● {venue.status}</span>
+              </div>
+              <h3 className="font-extrabold text-base text-slate-900 mt-1">{venue.name}</h3>
+              <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#0D9488]" /> {venue.location}</p>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div><strong>Capacity:</strong> {venue.capacity} Guests</div>
+              <div><strong>Sound Rig:</strong> {venue.soundRig}</div>
+              <div><strong>Curfew:</strong> {venue.curfew}</div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs font-black text-slate-900">Rate: ₹{venue.indicativeRateINR.toLocaleString('en-IN')}</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleSendVenueRequest(venue)}
+              >
+                Request Hold
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderMyBookingsView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">My Bookings & Requests</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Track artist bookings and venue holds across all productions</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+          {(['All', 'Pending', 'Accepted', 'Rejected'] as const).map((filterOpt) => (
+            <button
+              key={filterOpt}
+              onClick={() => setBookingStatusFilter(filterOpt)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                bookingStatusFilter === filterOpt
+                  ? 'bg-[#0D9488] text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {filterOpt}
+            </button>
+          ))}
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {bookings
+            .filter((b) => (bookingStatusFilter === 'All' ? true : b.status === bookingStatusFilter))
+            .map((b) => (
+              <div key={b.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                    {b.targetType === 'Artist' ? <Mic2 className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-900">{b.targetName}</h4>
+                    <p className="text-xs text-slate-500">Event: {b.eventName} · Date: {b.date} · City: {b.city || 'Indore'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-black text-slate-900">₹{b.estimatedCostINR.toLocaleString('en-IN')}</span>
+                  <StatusBadge status={b.status} size="sm" />
+                  {b.status === 'Pending' && (
+                    <div className="flex items-center gap-1.5">
+                      <Button variant="primary" size="sm" onClick={() => handleUpdateBookingStatus(b.id, 'Accepted')}>Accept</Button>
+                      <Button variant="danger" size="sm" onClick={() => handleUpdateBookingStatus(b.id, 'Rejected')}>Decline</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMessagesView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Messages & Collaboration Inbox</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Secure direct communication with booked artists and venue coordinators</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[400px]">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 space-y-2">
+          <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 cursor-pointer">
+            <div className="font-bold text-xs text-teal-900">Sahil Verma (Live Vocalist)</div>
+            <p className="text-[11px] text-teal-700 truncate mt-0.5">Looking forward to the Indore concert!</p>
+          </div>
+          <div className="p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer">
+            <div className="font-bold text-xs text-slate-900">Rajwada Palace Grounds</div>
+            <p className="text-[11px] text-slate-500 truncate mt-0.5">Stage telemetry confirmed for Oct 28.</p>
+          </div>
+        </div>
+
+        <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-600 text-white font-bold flex items-center justify-center text-xs">SV</div>
+              <div className="bg-slate-100 p-3 rounded-2xl text-xs text-slate-800 max-w-md">
+                Hello Rahul! Rehearsals are locked for the Diwali Fusion Concert. Sound check is scheduled at 4 PM.
+              </div>
+            </div>
+            <div className="flex items-start gap-3 justify-end">
+              <div className="bg-teal-600 text-white p-3 rounded-2xl text-xs max-w-md">
+                Awesome Sahil. See you at the venue!
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+            <input type="text" placeholder="Type a message..." className="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#0D9488]" />
+            <Button variant="primary" size="sm">Send</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAnalyticsView = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white/85 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Event Analytics & Budget Reports</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Real-time expenditure tracking and booking performance metrics</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+          <div className="text-xs text-slate-500 font-bold">Total Planned Budget</div>
+          <div className="text-2xl font-black text-slate-900">₹{totalBudget.toLocaleString('en-IN')}</div>
+          <div className="text-xs text-teal-600 font-semibold">Across {events.length} active productions</div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+          <div className="text-xs text-slate-500 font-bold">Total Allocated Expenditure</div>
+          <div className="text-2xl font-black text-teal-700">₹{totalAllocated.toLocaleString('en-IN')}</div>
+          <div className="text-xs text-slate-500 font-semibold">{budgetAllocationPercent}% utilization rate</div>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+          <div className="text-xs text-slate-500 font-bold">Active Bookings</div>
+          <div className="text-2xl font-black text-purple-700">{bookings.length} Bookings</div>
+          <div className="text-xs text-purple-600 font-semibold">95% fulfillment success</div>
+        </div>
+      </div>
+    </div>
+  );
+
   const filteredBookings = bookings.filter((b) => {
     if (bookingStatusFilter === 'All') return true;
     return b.status === bookingStatusFilter;
   });
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
+    <div className="space-y-5 max-w-[1600px] mx-auto pb-10">
       {/* Toast Alert */}
       {successNotice && (
         <div className="bg-[#CCFBF1] border border-[#99F6E4] text-[#0F766E] p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-lg shadow-teal-500/10 animate-in fade-in sticky top-4 z-40">
@@ -740,6 +1088,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
            {/* User Profile Pill */}
            <div className="relative profile-menu-container">
             <button
+              ref={profileButtonRef}
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-xl bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/60 transition-colors cursor-pointer"
             >
@@ -755,8 +1104,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
             </button>
 
-            {profileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/90 p-3 z-[100] text-xs font-semibold animate-in fade-in space-y-2">
+            {profileMenuOpen && createPortal(
+              <div
+                className="fixed z-[9999] w-64 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/90 p-3 text-xs font-semibold animate-in fade-in space-y-2 profile-menu-portal"
+                style={{
+                  top: dropdownCoords ? `${dropdownCoords.top}px` : '70px',
+                  right: dropdownCoords ? `${dropdownCoords.right}px` : '24px',
+                }}
+              >
                 <div className="flex items-center gap-3 px-2 py-2 border-b border-slate-100">
                   <img
                     src={organizerProfile.avatarUrl}
@@ -808,7 +1163,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <span className="text-slate-700 font-bold">Rahul Raj</span>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
